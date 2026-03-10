@@ -1,0 +1,19 @@
+task_id: "COUPANG_VISUAL_001"
+name: "쿠팡 브랜드 일관성 및 배지 노출 검증"
+description: "쿠팡 메인 및 검색 결과에서 '로켓배송' 배지가 선명하게 노출되는지, UI 요소 간 겹침은 없는지 시각적으로 검증한다."
+max_score: 10
+action:
+  type: "SEARCH_AND_EXTRACT"
+  params:
+    url: "https://www.coupang.com"
+    keyword: "노트북"
+grading_guidelines:
+  - criteria: "로켓배송 배지가 상품 이미지 근처에 명확히 보이는가?"
+    weight: 0.4
+  - criteria: "검색 결과 레이아웃(상품 그리드)이 균일하게 정렬되어 있는가?"
+    weight: 0.3
+  - criteria: "가격 정보와 배송 정보가 겹치지 않고 가독성 있게 노출되는가?"
+    weight: 0.3
+validation_logic:
+  - type: "LLM_VISION_JUDGE"
+    prompt: "첨부된 스크린샷에서 브랜드 고유의 색상(Coupang Blue/Red)이 잘 사용되었는지도 함께 확인하세요."

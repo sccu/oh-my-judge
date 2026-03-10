@@ -1,0 +1,19 @@
+task_id: "NAVER_SHOPPING_001"
+name: "네이버 쇼핑 상품 검색 및 N-Pay 노출 확인"
+description: "네이버 쇼핑에서 '전기 자전거'를 검색하고, 첫 페이지의 상품들에 'N-Pay' 아이콘이 정상적으로 표시되는지 확인한다."
+max_score: 10
+action:
+  type: "NAVER_SEARCH"
+  params:
+    url: "https://shopping.naver.com/home"
+    keyword: "전기 자전거"
+grading_guidelines:
+  - criteria: "검색 결과 페이지가 정상적으로 로드되었는가?"
+    weight: 0.3
+  - criteria: "N-Pay 아이콘이 상품 카드 영역에 명확히 보이는가? (시각적 검증 필수)"
+    weight: 0.4
+  - criteria: "검색 결과 상품명이 키워드와 연관성이 있는가?"
+    weight: 0.3
+validation_logic:
+  - type: "LLM_VISION_JUDGE"
+    prompt: "네이버 쇼핑 고유의 색상 테마가 깨지지 않고 잘 유지되는지 스크린샷에서 확인하세요."
