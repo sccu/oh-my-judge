@@ -93,7 +93,7 @@ class LLMJudge:
                 { "criteria": "레이아웃 정렬", "score": 0.9, "reason": "그리드 시스템이 안정적임" }
             ],
             "final_opinion": "시각적으로 매우 완성도 높은 페이지이며, 주요 정보가 사용자에게 명확히 전달됨.",
-            "ui_integrity_check": "Pass"
+            "validation_check": "Pass"
         }
         
         return mock_visual_response

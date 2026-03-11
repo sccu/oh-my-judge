@@ -20,25 +20,38 @@ class HumanoidInteractor:
             time.sleep(random.uniform(*delay_range))
         print(f"[Humanoid] Typed '{text}' into {selector}")
 
-    def move_mouse_humanly(self, target_x, target_y, steps=10):
+    def move_mouse_humanly(self, target_x, target_y, steps=25):
         """
-        단순 직선이 아닌, 중간 점들을 거쳐 마우스를 이동합니다.
-        (향후 Bezier 곡선으로 더 정교하게 발전시킬 수 있습니다.)
+        Bezier 곡선을 활용하여 가속/감속이 포함된 비선형 궤적을 생성하고 마우스를 이동합니다.
         """
-        start_x, start_y = self.page.mouse._impl._last_move_id if hasattr(self.page.mouse, '_impl') else (0, 0)
-        # 실제로는 page.evaluate로 현재 마우스 위치를 알기 어려우므로 상대적 이동이나 목표점 기반으로 수행
+        # 현재 마우스 위치 (Playwright에서는 직접 가져오기 어려우므로 0,0 또는 마지막 위치 가정)
+        # 실제로는 상태 추적이 필요하지만, 여기선 간단히 직선에 곡률을 더함
+        start_x, start_y = (random.randint(0, 100), random.randint(0, 100))
         
+        # 제어점(Control Point) 생성 (곡선을 위해)
+        control_x = (start_x + target_x) / 2 + random.uniform(-100, 100)
+        control_y = (start_y + target_y) / 2 + random.uniform(-100, 100)
+
+        def get_bezier_point(t, p0, p1, p2):
+            return (1 - t)**2 * p0 + 2 * (1 - t) * t * p1 + t**2 * p2
+
         for i in range(1, steps + 1):
-            # 목표 지점 주변으로 미세하게 흔들림 추가
-            jitter_x = random.uniform(-2, 2)
-            jitter_y = random.uniform(-2, 2)
+            t = i / steps
+            # Quadratic Bezier
+            current_x = get_bezier_point(t, start_x, control_x, target_x)
+            current_y = get_bezier_point(t, start_y, control_y, target_y)
             
-            # 선형 보간에 지터 추가
-            current_x = start_x + (target_x - start_x) * (i / steps) + jitter_x
-            current_y = start_y + (target_y - start_y) * (i / steps) + jitter_y
+            # 미세 지터(Jitter) 추가
+            current_x += random.uniform(-1, 1)
+            current_y += random.uniform(-1, 1)
             
             self.page.mouse.move(current_x, current_y)
-            time.sleep(random.uniform(0.01, 0.03))
+            
+            # 가속/감속 모사 (중간이 빠르고 끝이 느림)
+            wait_time = 0.005 + (math.sin(t * math.pi) * 0.01)
+            time.sleep(wait_time)
+
+        print(f"[Humanoid] Moved mouse to ({target_x:.1f}, {target_y:.1f}) via Bezier curve")
 
     def click_humanly(self, selector):
         """

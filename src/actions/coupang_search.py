@@ -14,16 +14,35 @@ class CoupangSearchAction(BaseAction):
 
         try:
             # 1. 메인 페이지 접속
+            print(f"[CoupangAction] Navigating to {url}...")
             self.page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            self.humanoid.wait_randomly(1, 2)
+            self.humanoid.wait_randomly(2, 4)
+            
+            # 페이지 상태 확인 (Akamai 챌린지 감지)
+            title = self.page.title()
+            print(f"[CoupangAction] Current Page Title: {title}")
+            
+            if "Coupang!" in title or "Access Denied" in title:
+                print("[CoupangAction] Detected potential challenge or blocking page.")
+                self.capture_evidence("challenge_detected")
             
             # 2. 검색창 입력 및 검색
             search_input = "#headerSearchKeyword"
-            self.page.wait_for_selector(search_input, timeout=10000)
+            print(f"[CoupangAction] Waiting for search selector: {search_input}")
+            
+            try:
+                self.page.wait_for_selector(search_input, timeout=15000)
+            except Exception as e:
+                print(f"[CoupangAction] Timeout waiting for search input. Current URL: {self.page.url}")
+                self.capture_evidence("search_input_timeout")
+                # 페이지 내용 일부 출력 (디버깅)
+                text_content = self.page.inner_text("body")[:500]
+                print(f"[CoupangAction] Page body snippet: {text_content}")
+                raise e
             
             # 사람처럼 검색어 입력
             self.humanoid.type_humanly(search_input, keyword)
-            self.humanoid.wait_randomly(0.5, 1.5)
+            self.humanoid.wait_randomly(1.0, 2.0)
             
             # 검색 버튼 클릭
             search_button = "#headerSearchBtn"
