@@ -75,28 +75,85 @@ class HumanoidInteractor:
         duration = random.uniform(min_sec, max_sec)
         time.sleep(duration)
 
-    def warmup(self):
+    def move_and_scroll_humanly(self, target_x, target_y, scroll_delta, steps=30):
         """
-        페이지 진입 직후 사람처럼 행동하여 신뢰도를 높입니다 (스크롤, 마우스 흔들기).
+        마우스 이동과 스크롤을 교차로 수행하여 동시 동작을 시뮬레이션합니다.
         """
-        print("[Humanoid] Starting self-warmup...")
-        
-        # 1. 무작위 마우스 이동
-        for _ in range(3):
-            tx, ty = random.randint(200, 800), random.randint(200, 600)
-            self.move_mouse_humanly(tx, ty, steps=15)
-            self.wait_randomly(0.5, 1.0)
+        start_x, start_y = (random.randint(100, 300), random.randint(100, 300))
+        control_x = (start_x + target_x) / 2 + random.uniform(-150, 150)
+        control_y = (start_y + target_y) / 2 + random.uniform(-150, 150)
 
-        # 2. 자연스러운 스크롤 (위/아래)
-        print("[Humanoid] Performing natural scrolls...")
-        for _ in range(random.randint(2, 4)):
-            scroll_amount = random.randint(300, 700)
-            self.page.mouse.wheel(0, scroll_amount)
-            self.wait_randomly(0.8, 1.5)
+        def get_bezier_point(t, p0, p1, p2):
+            return (1 - t)**2 * p0 + 2 * (1 - t) * t * p1 + t**2 * p2
+
+        scroll_per_step = scroll_delta / steps
+
+        for i in range(1, steps + 1):
+            t = i / steps
+            current_x = get_bezier_point(t, start_x, control_x, target_x)
+            current_y = get_bezier_point(t, start_y, control_y, target_y)
             
-            # 가끔 다시 조금 위로 스크롤
-            if random.random() > 0.7:
-                self.page.mouse.wheel(0, -200)
-                self.wait_randomly(0.5, 1.0)
+            # 1. 마우스 이동
+            self.page.mouse.move(current_x + random.uniform(-1, 1), current_y + random.uniform(-1, 1))
+            
+            # 2. 아주 미세한 스크롤 발생
+            self.page.mouse.wheel(0, scroll_per_step)
+            
+            # 가변 지연 (사람의 운동 속도 모사)
+            wait_time = 0.005 + (math.sin(t * math.pi) * 0.01)
+            time.sleep(wait_time)
 
-        print("[Humanoid] Warmup completed.")
+    def warmup(self, search_selectors=None):
+        """
+        페이지 진입 직후 사람처럼 행동하여 신뢰도를 높입니다.
+        (복합 액션: 마우스 이동 + 스크롤 동시 수행 포함)
+        """
+        print("[Humanoid] Starting advanced multi-tasking warmup...")
+        
+        # 1. 복합 액션: 아래로 내려가면서 마우스 훑기 (2회)
+        for _ in range(2):
+            tx, ty = random.randint(300, 700), random.randint(300, 500)
+            sd = random.randint(400, 800)
+            self.move_and_scroll_humanly(tx, ty, sd, steps=40)
+            self.wait_randomly(0.3, 0.6)
+
+        # 2. 다시 빠르게 최상단으로 복구
+        print("[Humanoid] Quick scroll back to top...")
+        for _ in range(5):
+            self.page.mouse.wheel(0, -600)
+            time.sleep(0.05)
+        
+        self.wait_randomly(0.5, 1.0)
+
+        # 3. 검색창 사전 입력 및 삭제 (노트북 -> 2음절 -> 삭제)
+        if search_selectors:
+            for selector in search_selectors:
+                try:
+                    locator = self.page.locator(selector)
+                    if locator.is_visible():
+                        print(f"[Humanoid] Warmup: Engaging search input ({selector})")
+                        self.click_humanly(selector)
+                        self.wait_randomly(0.5, 0.8)
+                        
+                        # "노트북" 중 "노트"만 입력 (사람처럼)
+                        print("[Humanoid] Warmup: Typing partial keyword...")
+                        for char in "노트":
+                            self.page.keyboard.type(char)
+                            time.sleep(random.uniform(0.1, 0.3))
+                        
+                        self.wait_randomly(0.8, 1.2)
+                        
+                        # 백스페이스로 모두 지우기
+                        print("[Humanoid] Warmup: Clearing partial keyword...")
+                        for _ in range(2):
+                            self.page.keyboard.press("Backspace")
+                            time.sleep(0.1)
+                        
+                        # 지운 후 1초 대기 (사람의 반응 시간)
+                        print("[Humanoid] Warmup: Settling for 1s...")
+                        time.sleep(1.0)
+                        break
+                except:
+                    continue
+
+        print("[Humanoid] High-activity warmup completed.")

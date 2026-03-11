@@ -12,7 +12,7 @@ def load_task(task_path):
     with open(task_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
-def run_pipeline(task_path, keyword_file=None):
+def run_pipeline(task_path, keyword_file=None, do_warmup=False, max_products=3):
     # 1. 태스크 로드
     task = load_task(task_path)
     print(f"[Main] Loaded Task: {task['name']} ({task['task_id']})")
@@ -26,7 +26,8 @@ def run_pipeline(task_path, keyword_file=None):
     else:
         keywords = [task['action']['params'].get('keyword', '노트북')]
 
-    # 2. 브라우저 준비 (CDP 전략 활용 권장)
+    # 2. 브라우저 준비
+    browser_launched_by_me = False
     with sync_playwright() as p:
         print("[Main] Preparing browser...")
         try:
@@ -42,24 +43,30 @@ def run_pipeline(task_path, keyword_file=None):
                 page = context.new_page()
         except Exception as e:
             print(f"[Main] CDP Connection failed ({e}). Launching new instance...")
-            browser = p.chromium.launch(headless=True)
+            browser = p.chromium.launch(headless=False) # 자동 실행 시에도 안정성을 위해 Headful
             context = browser.new_context()
             page = context.new_page()
+            browser_launched_by_me = True
 
-        # 3. 액션 실행 루프
+        # 3. 액션 초기화
         action_type = task['action']['type']
-        
+        action = None
+        if action_type == "SEARCH_AND_EXTRACT":
+            action = CoupangSearchAction(page)
+        elif action_type == "NAVER_SEARCH":
+            action = NaverSearchAction(page)
+
+        # 웜업 수행 (최초 1회)
+        if do_warmup and action:
+            print("[Main] Running initial automated warmup (once)...")
+            action.warmup()
+
+        # 4. 액션 실행 루프
         for i, kw in enumerate(keywords):
             print(f"\n[Main] Processing Keyword {i+1}/{len(keywords)}: {kw}")
             
-            action = None
-            if action_type == "SEARCH_AND_EXTRACT":
-                action = CoupangSearchAction(page)
-            elif action_type == "NAVER_SEARCH":
-                action = NaverSearchAction(page)
-            
             if action:
-                result = action.run(keyword=kw)
+                result = action.run(keyword=kw, max_products=max_products)
                 
                 if result['success']:
                     print(f"[Main] Action for '{kw}' successful.")
@@ -68,17 +75,25 @@ def run_pipeline(task_path, keyword_file=None):
             
             # 마지막 키워드가 아니면 사람처럼 대기
             if i < len(keywords) - 1:
-                wait_time = random.uniform(5, 15)
+                wait_time = random.uniform(5, 10)
                 print(f"[Main] Waiting {wait_time:.1f}s before next keyword...")
                 time.sleep(wait_time)
 
         print("\n[Main] All tasks completed.")
+        
+        if browser_launched_by_me:
+            print("[Main] Closing the browser instance I launched...")
+            browser.close()
+        else:
+            print("[Main] Disconnecting from existing browser (keeping it open).")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Oh-My-Judge Runner")
     parser.add_argument("--task", type=str, default="tasks/sample_task.yaml", help="Path to task YAML file")
     parser.add_argument("--keywords", type=str, help="Path to keywords file")
+    parser.add_argument("--warmup", action="store_true", help="Perform automated warmup before search")
+    parser.add_argument("--max-products", type=int, default=3, help="Number of top products to extract")
     args = parser.parse_args()
 
     os.makedirs("outputs", exist_ok=True)
-    run_pipeline(args.task, args.keywords)
+    run_pipeline(args.task, args.keywords, args.warmup, args.max_products)

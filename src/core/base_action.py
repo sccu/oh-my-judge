@@ -26,9 +26,13 @@ class BaseAction(ABC):
     def capture_evidence(self, name):
         timestamp = int(time.time())
         path = f"outputs/{name}_{timestamp}.png"
-        self.page.screenshot(path=path)
-        self.results["screenshots"].append(path)
-        print(f"[Action] Captured screenshot: {path}")
+        try:
+            # 타임아웃을 5초로 극단적으로 줄여 데이터 추출에 방해되지 않게 함
+            self.page.screenshot(path=path, timeout=5000)
+            self.results["screenshots"].append(path)
+            print(f"[Action] Captured screenshot: {path}")
+        except Exception as e:
+            print(f"[Action] Skipping screenshot {name} due to delay/timeout: {e}")
 
     def extract_dom(self, name):
         """
