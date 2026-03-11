@@ -74,3 +74,29 @@ class HumanoidInteractor:
         """
         duration = random.uniform(min_sec, max_sec)
         time.sleep(duration)
+
+    def warmup(self):
+        """
+        페이지 진입 직후 사람처럼 행동하여 신뢰도를 높입니다 (스크롤, 마우스 흔들기).
+        """
+        print("[Humanoid] Starting self-warmup...")
+        
+        # 1. 무작위 마우스 이동
+        for _ in range(3):
+            tx, ty = random.randint(200, 800), random.randint(200, 600)
+            self.move_mouse_humanly(tx, ty, steps=15)
+            self.wait_randomly(0.5, 1.0)
+
+        # 2. 자연스러운 스크롤 (위/아래)
+        print("[Humanoid] Performing natural scrolls...")
+        for _ in range(random.randint(2, 4)):
+            scroll_amount = random.randint(300, 700)
+            self.page.mouse.wheel(0, scroll_amount)
+            self.wait_randomly(0.8, 1.5)
+            
+            # 가끔 다시 조금 위로 스크롤
+            if random.random() > 0.7:
+                self.page.mouse.wheel(0, -200)
+                self.wait_randomly(0.5, 1.0)
+
+        print("[Humanoid] Warmup completed.")
